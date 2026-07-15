@@ -1,0 +1,115 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+enum Role {
+  SUPER_ADMIN
+  HOSPITAL_ADMIN
+  DOCTOR
+  NURSE
+  RECEPTIONIST
+  LAB_TECHNICIAN
+  PHARMACIST
+  ACCOUNTANT
+  PATIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Hospital {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  appointments Appointment[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role      @default(PATIENT)
+  hospitalId   String? // Nullable only for global platform Super Admins
+  hospital     Hospital? @relation(fields: [hospitalId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // Soft-delete support flag
+
+  doctorProfile  Doctor?
+  patientProfile Patient?
+
+  @@index([hospitalId])
+  @@index([email])
+}
+
+model Doctor {
+  id             String        @id @default(uuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialisation String
+  isActive       Boolean       @default(true)
+  appointments   Appointment[]
+}
+
+model Patient {
+  id             String          @id @default(uuid())
+  userId         String          @unique
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicalRecords MedicalRecord[]
+  appointments   Appointment[]
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital          @relation(fields: [hospitalId], references: [id])
+  patientId   String
+  patient     Patient           @relation(fields: [patientId], references: [id])
+  doctorId    String
+  doctor      Doctor            @relation(fields: [doctorId], references: [id])
+  scheduledAt DateTime
+  status      AppointmentStatus @default(PENDING)
+  isEmergency Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime? // Soft-delete compliance
+
+  medicalRecord MedicalRecord?
+
+  @@index([hospitalId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([scheduledAt])
+}
+
+model MedicalRecord {
+  id            String      @id @default(uuid())
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id])
+  vitalsJson    Json // Encapsulating BP, SpO2, pulse, height, weight, BMI
+  diagnosis     String // Mapped to ICD-10 codes
+  treatmentPlan String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([patientId])
+}
