@@ -1,0 +1,21 @@
+### Register a New User
+POST http://localhost:3001/auth/register
+Content-Type: application/json
+
+{
+  "email": "testdoctor@medcore.com",
+  "password": "SecurePassword123",
+  "name": "Dr. John Doe",
+  "role": "DOCTOR"
+}
+
+###
+
+### Login with the Created User
+POST http://localhost:3001/auth/login
+Content-Type: application/json
+
+{
+  "email": "testdoctor@medcore.com",
+  "password": "SecurePassword123"
+}
